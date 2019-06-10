@@ -1,16 +1,56 @@
 from bs4 import BeautifulSoup
-import requests
+import requests, smtplib, ssl
 import config
-
-login = config.username
-password = config.password
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 login_data = {
-	'j_username':str(login),
-	'j_password':str(password)
+	"j_username":config.peka_login_data["username"],
+	"j_password":config.peka_login_data["password"]
 }
 
 with requests.Session() as s:
-	url = 'https://www.peka.poznan.pl/SOP/j_spring_security_check'
+	url = "https://www.peka.poznan.pl/SOP/j_spring_security_check"
 	r = s.post(url, data=login_data)
-	soup = BeautifulSoup(r.content, 'html.parser')
+	soup = BeautifulSoup(r.content, "html.parser")
+
+	account_info = str(soup.find_all("td",attrs={"class":"col-2","colspan":"3"})[1])
+	start = account_info.find("Kwota:")
+	end = account_info.find("zł")
+	money_left = account_info[start+6:end+2].replace("\t","").replace("\n","")
+	owner = soup.find_all("td",attrs={"class":"col-2"})[0].text.strip().replace("\t","")
+
+msg = MIMEMultipart("alternative")
+msg["From"] = config.mail_data["sender_mail"]
+msg["To"] = config.mail_data["receiver_mail"]
+msg["Subject"] = "Peka saldo"
+text = f"Pozostałe saldo: {money_left}"
+html = f"""\
+<html style="font-family: Arial; text-align: center">
+	<head></head>
+	<body style="border: solid; border-color: #199cfa; padding: 10px; margin: 20px;">
+		<div style="margin: auto;">
+			<h3>Właściciel karty</h3>
+			<h2>{owner}</h2>
+			<h3>Na karcie PEKA zostało</h3>
+			<h2>{money_left}</h2>
+			<a href="https://www.peka.poznan.pl/SOP/account/home.jspb?execution=e1s3" style="text-decoration: none; color: White;">
+				<div style="margin: auto; background-color: #199cfa; width: 150px; height: 40px; display: flex; align-items: center; justify-content: center;">
+				<b>DOŁADUJ PEKĘ</b>
+				</div>
+			</a>
+		</div><br><br>
+		<img src="https://www.peka.poznan.pl/SOP/img/logo/peka-logo.png" style="display: block; margin: auto;"><br><br>
+	</body>
+</html>
+"""
+
+part1 = MIMEText(text, "plain")
+part2 = MIMEText(html, "html")
+msg.attach(part1)
+msg.attach(part2)
+
+context = ssl.create_default_context()
+with smtplib.SMTP_SSL("smtp.wp.pl", 465, context=context) as server:
+	server.login(config.mail_data["sender_mail"],config.mail_data["sender_password"])
+	server.sendmail(config.mail_data["sender_mail"],config.mail_data["receiver_mail"],msg.as_string())

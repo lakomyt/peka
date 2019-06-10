@@ -17,14 +17,17 @@ with requests.Session() as s:
 	account_info = str(soup.find_all("td",attrs={"class":"col-2","colspan":"3"})[1])
 	start = account_info.find("Kwota:")
 	end = account_info.find("zł")
-	money_left = account_info[start+6:end+2].replace("\t","").replace("\n","")
+	money_left = account_info[start+6:end].replace("\t","").replace("\n","")
 	owner = soup.find_all("td",attrs={"class":"col-2"})[0].text.strip().replace("\t","")
+
+if float(money_left.replace(",",".")) > 10.00:
+	exit()
 
 msg = MIMEMultipart("alternative")
 msg["From"] = config.mail_data["sender_mail"]
-msg["To"] = config.mail_data["receiver_mail"]
+msg["To"] = ", ".join(config.mail_recipients)
 msg["Subject"] = "Peka saldo"
-text = f"Pozostałe saldo: {money_left}"
+text = f"Pozostałe saldo: {money_left} zł"
 html = f"""\
 <html style="font-family: Arial; text-align: center">
 	<head></head>
@@ -33,7 +36,7 @@ html = f"""\
 			<h3>Właściciel karty</h3>
 			<h2>{owner}</h2>
 			<h3>Na karcie PEKA zostało</h3>
-			<h2>{money_left}</h2>
+			<h2>{money_left} zł</h2>
 			<a href="https://www.peka.poznan.pl/SOP/account/home.jspb?execution=e1s3" style="text-decoration: none; color: White;">
 				<div style="margin: auto; background-color: #199cfa; width: 150px; height: 40px; display: flex; align-items: center; justify-content: center;">
 				<b>DOŁADUJ PEKĘ</b>
@@ -53,4 +56,4 @@ msg.attach(part2)
 context = ssl.create_default_context()
 with smtplib.SMTP_SSL("smtp.wp.pl", 465, context=context) as server:
 	server.login(config.mail_data["sender_mail"],config.mail_data["sender_password"])
-	server.sendmail(config.mail_data["sender_mail"],config.mail_data["receiver_mail"],msg.as_string())
+	server.sendmail(config.mail_data["sender_mail"],config.mail_recipients,msg.as_string())

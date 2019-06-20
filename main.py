@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-import requests, smtplib, ssl
+import requests, smtplib, ssl, subprocess
 import config
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -17,7 +17,7 @@ with requests.Session() as s:
 	account_info = str(soup.find_all("td",attrs={"class":"col-2","colspan":"3"})[1])
 	start = account_info.find("Kwota:")
 	end = account_info.find("zł")
-	money_left = account_info[start+6:end].replace("\t","").replace("\n","")
+	money_left = account_info[start+6:end].replace("\t","").replace("\n","").replace("\r","")
 	owner = soup.find_all("td",attrs={"class":"col-2"})[0].text.strip().replace("\t","")
 
 if float(money_left.replace(",",".")) > 10.00:
@@ -57,3 +57,6 @@ context = ssl.create_default_context()
 with smtplib.SMTP_SSL("smtp.wp.pl", 465, context=context) as server:
 	server.login(config.mail_data["sender_mail"],config.mail_data["sender_password"])
 	server.sendmail(config.mail_data["sender_mail"],config.mail_recipients,msg.as_string())
+
+if config.notified_user != "":
+	subprocess.call(f"./notify_send.sh {config.notified_user} 'Peka saldo' 'pozostało {money_left}'", shell=True)

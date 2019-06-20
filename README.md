@@ -1,6 +1,6 @@
 # PEKA SCRAPER
 
-Program scrapuje stronę [peka.poznan.pl](https://peka.poznan.pl) sprawdzając ile punktów na koncie pozostało, jeśli saldo jest mniejsze niż 15, program wysyła maila do odbiorców podanych w pliku config.
+Program scrapuje stronę [peka.poznan.pl](https://peka.poznan.pl) sprawdzając ile punktów na koncie pozostało, jeśli saldo jest mniejsze niż 10, program wysyła maila do odbiorców podanych w pliku config.
 
 ### Example config
 
@@ -16,6 +16,8 @@ mail_data = {
 }
 
 mail_recipients = ['']
+
+notified_user = ''
 ```
 
 autor: Tomasz Łakomy
